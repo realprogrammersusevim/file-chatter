@@ -1,0 +1,75 @@
+#!python3
+
+import argparse
+import pickle
+
+from llama_cpp import Llama
+from nltk.tokenize import word_tokenize
+
+from utils import preprocess
+
+parser = argparse.ArgumentParser(
+    "query",
+    description="Query your documents and have them summarized by a friendly Llama",
+)
+parser.add_argument("search", help="What to search your documents for")
+parser.add_argument(
+    "-m",
+    "--model",
+    type=str,
+    default="/Volumes/Storage/git/llama.cpp/models/llama-2-7b-chat/ggml_q5.bin",
+    help="Model path",
+)
+args = parser.parse_args()
+
+# Load the pre-computed search indexes
+with open("dataset.pickle", "rb") as d:
+    dataset = pickle.load(d)
+
+with open("tfidf.pickle", "rb") as t:
+    tf_idf = pickle.load(t)
+
+
+# The actual parse and search function
+def matching_score(k, query):
+    preprocessed_query = preprocess(query)
+    tokens = word_tokenize(str(preprocessed_query))
+
+    query_weights = {}
+
+    for key in tf_idf:
+        if key[1] in tokens:
+            try:
+                query_weights[key[0]] += tf_idf[key]
+            except:
+                query_weights[key[0]] = tf_idf[key]
+
+    query_weights = sorted(query_weights.items(), key=lambda x: x[1], reverse=True)
+
+    l = []
+
+    for i in query_weights[:k]:
+        l.append(i[0])
+
+    return l
+
+
+# Put the text results in a list
+documents = []
+
+for i in matching_score(3, args.search):
+    documents.append(dataset[i][1])
+
+llm = Llama(model_path=args.model, verbose=False, use_mlock=True, n_ctx=1000)
+stream = llm(
+    "\n".join(documents)
+    + f'Respond to the query "{args.search}" in a short and concise paragraph using the information above.\n',
+    max_tokens=200,
+    stream=True,
+    stop=["\n"],
+)
+
+for output in stream:
+    print(output["choices"][0]["text"], end="", flush=True)
+
+print()
