@@ -1,4 +1,7 @@
+#!python3
+
 import pickle
+from argparse import ArgumentParser
 from collections import Counter
 from glob import glob
 
@@ -7,11 +10,13 @@ from nltk.tokenize import word_tokenize
 
 from utils import preprocess
 
+parser = ArgumentParser("index")
+parser.add_argument("glob", help="The file glob that you want to index using TF-IDF")
+args = parser.parse_args()
+
 dataset = []
 
-for file in glob(
-    "/Users/jonathanmilligan/Library/Mobile Documents/iCloud~md~obsidian/Documents/Zettelkasten/*.md"
-):
+for file in glob(args.glob):
     with open(file) as f:
         text = f.read().strip()
 
