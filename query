@@ -1,7 +1,9 @@
 #!python3
 
 import argparse
+import os
 import pickle
+import sys
 
 from llama_cpp import Llama
 from nltk.tokenize import word_tokenize
@@ -24,6 +26,7 @@ parser.add_argument(
     default="/Volumes/Storage/git/llama.cpp/models/llama-2-7b-chat/ggml_q5.bin",
     help="Model path",
 )
+parser.add_argument("-v", "--verbose", action="store_true")
 args = parser.parse_args()
 
 # Load the pre-computed search indexes
@@ -53,8 +56,43 @@ def matching_score(k, query):
     return [i[0] for i in query_weights[:k]]
 
 
-# Load the LLM once and then reuse it for multiple queries instead of reloading
-llm = Llama(model_path=args.model, verbose=False, use_mlock=True, n_ctx=1000)
+if not args.verbose:
+    # Save a copy of the current file descriptors for stdout and stderr
+    stdout_fd = os.dup(1)
+    stderr_fd = os.dup(2)
+
+    # Open up /dev/null to redirect
+    devnull_fd = os.open(os.devnull, os.O_WRONLY)
+
+    # Replace stdout and stderr with /dev/null
+    os.dup2(devnull_fd, 1)
+    os.dup2(devnull_fd, 2)
+
+    # Only writing to sys.stdout and sys.stderr should still work
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    sys.stdout = os.fdopen(stdout_fd, "w")
+    sys.stderr = os.fdopen(stderr_fd, "w")
+
+try:
+    # Load the LLM once and then reuse it for multiple queries instead of reloading
+    llm = Llama(model_path=args.model, verbose=False, use_mlock=True, n_ctx=1000)
+finally:
+    if not args.verbose:
+        # Restore stdout and stderr to their original state
+        os.dup2(stdout_fd, 1)
+        os.dup2(stderr_fd, 2)
+
+        # Close those saved file descriptors
+        os.close(stdout_fd)
+        os.close(stderr_fd)
+
+        # Close the /dev/null file descriptors
+        os.close(devnull_fd)
+
+        # Restore the sys.stdout and sys.stderr
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
 
 while True:
     if args.search:
