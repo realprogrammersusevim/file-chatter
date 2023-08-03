@@ -22,11 +22,21 @@ parser.add_argument(
 parser.add_argument(
     "-m",
     "--model",
-    type=str,
     default="/Volumes/Storage/git/llama.cpp/models/llama-2-7b-chat/ggml_q5.bin",
     help="Model path",
 )
-parser.add_argument("-v", "--verbose", action="store_true")
+parser.add_argument(
+    "-p",
+    "--prompt",
+    default="You are Jeeves, a highly competent and intelligent personal valet who responds immediately and precisely to all requests",
+    help="The system prompt telling the LLM who it is.",
+)
+parser.add_argument(
+    "-v",
+    "--verbose",
+    action="store_true",
+    help="Show verbose model loading information",
+)
 args = parser.parse_args()
 
 # Load the pre-computed search indexes
@@ -110,7 +120,7 @@ while True:
 
     stream = llm(
         "\n".join(documents)
-        + "<<SYS>>\nYou are Jeeves, a highly competent and intelligent personal valet who responds immediately and precisely to all requests\n<<SYS>>\n\n"
+        + f"<<SYS>>\n{args.prompt}\n<<SYS>>\n\n"
         + f'[INST]Respond to the query "{search}" in a short and concise paragraph using the information above.[/INST]\n',
         max_tokens=200,
         stream=True,
