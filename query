@@ -28,7 +28,7 @@ parser.add_argument(
 parser.add_argument(
     "-p",
     "--prompt",
-    default="You are Jeeves, a highly competent and intelligent personal valet who responds immediately and precisely to all requests",
+    default="Respond immediately and precisely to all queries in a short and concise paragraph using the information above.",
     help="The system prompt telling the LLM who it is.",
 )
 parser.add_argument(
@@ -120,8 +120,13 @@ while True:
 
     stream = llm(
         "\n".join(documents)
-        + f"<<SYS>>\n{args.prompt}\n<<SYS>>\n\n"
-        + f'[INST]Respond to the query "{search}" in a short and concise paragraph using the information above.[/INST]\n',
+        + f"""\
+<s>[INST] <<SYS>>
+{args.prompt}
+<</SYS>>
+
+{search} [/INST]
+""",
         max_tokens=200,
         stream=True,
         stop=["\n"],
