@@ -3,7 +3,7 @@ diskcache==5.6.1
 docopt==0.6.2
 joblib==1.2.0
 llama-cpp-python==0.1.73
-nltk==3.8.1
+nltk==3.9.3
 num2words==0.5.12
 numpy==1.25.1
 pandas==2.0.3
